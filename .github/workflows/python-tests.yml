@@ -1,0 +1,67 @@
+name: Run Python Capstone Project Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-bitcoinrpc
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Node.js with NVM
+        run: |
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install --lts
+          node -v
+          npm install
+
+      - name: Make scripts executable
+        run: |
+          chmod +x ./test.sh
+          chmod +x ./run.sh
+          chmod +x ./python/run-python.sh
+
+      - name: Run test.sh
+        run: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          ./test.sh
+
+      - name: Check result
+        if: ${{ failure() }}
+        run: echo "❌ Some tests failed. Please review the output above."
+
+      - name: Check result on success
+        if: ${{ success() }}
+        run: echo "✅ All tests passed successfully!"
+
+      - name: Upload output file (optional)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: out.txt
+          path: ./out.txt
